@@ -77,8 +77,14 @@ public class NamesrvController {
 
         this.kvConfigManager.load();
 
+        /**
+         * 负责通信，remotingServer监听一些端口，收到Broker、Client等发过来的请求后，根据请求的命令，调用不同的Processor来处理
+         */
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
 
+        /**
+         * 默认是8个线程的线程池
+         */
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
 
@@ -94,7 +100,9 @@ public class NamesrvController {
                 NamesrvController.this.routeInfoManager.scanNotActiveBroker();
             }
         }, 5, 10, TimeUnit.SECONDS);
-
+        /**
+         * 10秒钟执行一次，打印配置信息
+         */
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -144,6 +152,9 @@ public class NamesrvController {
         return true;
     }
 
+    /**
+     * 创建netty的入站请求处理对象和线程池，其实这个对象也就是handler里面用了
+     */
     private void registerProcessor() {
         if (namesrvConfig.isClusterTest()) {
 
@@ -155,6 +166,10 @@ public class NamesrvController {
         }
     }
 
+    /**
+     * 开启netty的server端
+     * @throws Exception
+     */
     public void start() throws Exception {
         this.remotingServer.start();
 

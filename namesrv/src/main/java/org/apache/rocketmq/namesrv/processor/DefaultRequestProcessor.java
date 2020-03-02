@@ -66,6 +66,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         this.namesrvController = namesrvController;
     }
 
+    /**
+     * netty的handler会调用这个方法，这个是NameServer的核心业务处理逻辑
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     @Override
     public RemotingCommand processRequest(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
@@ -77,7 +84,13 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
                 request);
         }
 
-
+        /**
+         * 根据RequestCode调用不同的函数来处理，从RequestCode可以了解到NameServer的主要功能
+         * REGISTER_BROKER：在集群中新加入一个Broker机器
+         * GET_ROUTEINTO_BY_TOPIC：获取一个topic的路由信息
+         * WIPE_WRITE_PERM_OF_BROKER：删除一个Broker的写权限
+         * 等等功能
+        */
         switch (request.getCode()) {
             case RequestCode.PUT_KV_CONFIG:
                 return this.putKVConfig(ctx, request);
