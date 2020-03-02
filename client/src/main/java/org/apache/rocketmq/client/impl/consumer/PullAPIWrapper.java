@@ -178,6 +178,11 @@ public class PullAPIWrapper {
                 sysFlagInner = PullSysFlag.clearCommitOffsetFlag(sysFlagInner);
             }
 
+            /*
+            主动拉取消息，设置broker最长阻塞时间，默认是15s
+            requestHeader.setSuspendTimeoutMillis(brokerSuspendMaxTimeMillis);，作用是设置Broker 最长阻塞时间，默认设置是15秒，
+            注意是Broker 在没有新消息的时候才阻塞，有消息会立刻返回。
+             */
             PullMessageRequestHeader requestHeader = new PullMessageRequestHeader();
             requestHeader.setConsumerGroup(this.consumerGroup);
             requestHeader.setTopic(mq.getTopic());

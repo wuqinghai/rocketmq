@@ -49,10 +49,28 @@ public class RouteInfoManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    /**
+     * 存储了所有Topic的属性，key是topic的名称，value是QueueData的集合，个数为MasterBroker的个数
+     * QueueData封装了这个Topic的所在的broker名称（brokerName），写队列的个数（writeQueueNums），读队列的个数（readQueueNums），同步标识等
+     */
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
+    /**
+     * 存储了所有的broker的地址信息，key是brokerName，value是broker信息的封装对象BrokerData
+     * BrokerData：cluster-集群名、brokerName-broker名称、brokerAddrs-broker地址集合（master、salve地址的集合）
+     */
     private final HashMap<String/* brokerName */, BrokerData> brokerAddrTable;
+    /**
+     * 存储了集群的信息，key是集群名称，value是这个集群所对应的broker名称的集合
+     */
     private final HashMap<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
+    /**
+     * 存储了每个broker的实时状态信息，key是broker的机器地址，因为broker主从的原因，相同的brokerName会有多个broker
+     * 所以，一个brokerAddr，就是一个broker。value是BrokerLiveTable，封装了broker机器的实时状态信息
+     */
     private final HashMap<String/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
+    /**
+     * 存储了每个broker所对应的FilterServer（过滤服务器）
+     */
     private final HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
     public RouteInfoManager() {
@@ -426,6 +444,9 @@ public class RouteInfoManager {
         return null;
     }
 
+    /**
+     * 扫描不活动的Broker，并将其移除掉，关闭连接
+     */
     public void scanNotActiveBroker() {
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
         while (it.hasNext()) {
@@ -440,6 +461,11 @@ public class RouteInfoManager {
         }
     }
 
+    /**
+     * 将remoteAddr对应的broker信息，从维护的那个5个集合中清楚掉
+     * @param remoteAddr
+     * @param channel
+     */
     public void onChannelDestroy(String remoteAddr, Channel channel) {
         String brokerAddrFound = null;
         if (channel != null) {

@@ -66,6 +66,14 @@ public class PullRequestHoldService extends ServiceThread {
     @Override
     public void run() {
         log.info("{} service started", this.getServiceName());
+        /*
+        服务端接到新消息请求后， 如果队列里没有新消息，并不急于返回，通过一个循环不断查看状态，每次waitForRunning一段时间（默认是5 秒），
+        然后后再Check。默认情况下当Broker 一直没有新消息， 第三次Check的时候， 等待时间超过Request里面的BrokerSuspendMaxTimeMi11is ，
+        就返回空结果。在等待的过程中，Broker收到了新的消息后会直接调用notifyMessageArriving 函数返回请求结果。
+        “长轮询”的核心是， Broker端HOLD住客户端过来的请求一小段时间，在这个时间内有新消息到达，就利用现有的连接立刻返回消息给Consumer。
+        “长轮询”的主动权还是掌握在Consumer 手中， Broker 即使有大量消息积压，也不会主动推送给Consumer 。
+        长轮询方式的局限性，是在HOLD住Consumer请求的时候需要占用资源，它适合用在消息队列这种客户端连接数可控的场景中。
+         */
         while (!this.isStopped()) {
             try {
                 if (this.brokerController.getBrokerConfig().isLongPollingEnable()) {

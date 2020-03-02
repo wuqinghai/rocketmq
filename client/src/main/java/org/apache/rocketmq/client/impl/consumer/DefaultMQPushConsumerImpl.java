@@ -28,6 +28,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import com.sun.scenario.effect.Offset;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.QueryResult;
 import org.apache.rocketmq.client.Validators;
@@ -211,6 +212,14 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
     }
 
     public void pullMessage(final PullRequest pullRequest) {
+
+        /*
+        RocketMQ 定义了一个快照类Process Queue 来解决这些问题，在
+        Push Consumer 运行的时候， 每个MessageQueue都会有个对应的ProcessQueue
+        对象，保存了这个Message Queue 消息处理状态的快照。
+        ProcessQueue 对象里主要的内容是一个TreeMap 和一个读写锁。TreeMap
+        里以Message Queue 的Offset 作为Key ，以消息内容的引用为Value ，保存了
+       所有从MessageQueue 获取到，但是还未被处理的消息； 读写锁控制着多个线程对TreeMap 对象的并发访问。*/
         final ProcessQueue processQueue = pullRequest.getProcessQueue();
         if (processQueue.isDropped()) {
             log.info("the pull request[{}] is dropped.", pullRequest.toString());
@@ -236,6 +245,10 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         long cachedMessageCount = processQueue.getMsgCount().get();
         long cachedMessageSizeInMiB = processQueue.getMsgSize().get() / (1024 * 1024);
 
+       /* 从代码中可以看出，PushConsumer 会判断获取但还未处理的消息个数、消
+        息总大小、Offset 的跨度，任何一个值超过设定的大小就隔一段时间再拉取消
+        息，从而达到流量控制的目的。此外ProcessQueue 还可以辅助实现顺序消费的
+        逻辑*/
         if (cachedMessageCount > this.defaultMQPushConsumer.getPullThresholdForQueue()) {
             this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);
             if ((queueFlowControlTimes++ % 1000) == 0) {
