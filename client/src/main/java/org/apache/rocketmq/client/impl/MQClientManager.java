@@ -44,6 +44,17 @@ public class MQClientManager {
         return getOrCreateMQClientInstance(clientConfig, null);
     }
 
+    /**
+     * MQClientInstance实现的是底层通信功能和获取并保存元数据的功能，就没有必要每个Consumer和Producer都创建
+     * 一个对象，一个MQClientInstance对象可以被多个Consumer或Producer公用。
+     * 1、clientId：clientIp + @ + InstanceName，clientIp是客户端机器ip地址，InstanceName默认值为“DEFAULT”
+     * 2、以clientId为key，value为MQClientInstance对象实例
+     * 3、假如一个项目里面需要连接2个RocketMQ集群，则单个MQClientInstance无法支持这种场景，一定要手动指定InstanceName，
+     *    这时底层会创建两个MQClientInstance对象。
+     * @param clientConfig
+     * @param rpcHook
+     * @return
+     */
     public MQClientInstance getOrCreateMQClientInstance(final ClientConfig clientConfig, RPCHook rpcHook) {
         String clientId = clientConfig.buildMQClientId();
         MQClientInstance instance = this.factoryTable.get(clientId);

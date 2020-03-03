@@ -37,6 +37,7 @@ import org.apache.rocketmq.common.protocol.body.ProcessQueueInfo;
 
 /**
  * Queue consumption snapshot
+ * PushConsumer运行的时候，每个message Queue都会有一个对应的ProcessQueue对象，保存了这个MessageQueue消息处理状态的快照
  */
 public class ProcessQueue {
     public final static long REBALANCE_LOCK_MAX_LIVE_TIME =
