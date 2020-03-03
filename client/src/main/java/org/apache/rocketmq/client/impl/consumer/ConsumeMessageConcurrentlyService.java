@@ -69,6 +69,9 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
         this.consumerGroup = this.defaultMQPushConsumer.getConsumerGroup();
         this.consumeRequestQueue = new LinkedBlockingQueue<Runnable>();
 
+        /**
+         * 自定义线程池，用来消费消息的线程池，可以通过consumerThreadMin和consumerThreadMax来自定义线程个数
+         */
         this.consumeExecutor = new ThreadPoolExecutor(
             this.defaultMQPushConsumer.getConsumeThreadMin(),
             this.defaultMQPushConsumer.getConsumeThreadMax(),
@@ -76,8 +79,13 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             TimeUnit.MILLISECONDS,
             this.consumeRequestQueue,
             new ThreadFactoryImpl("ConsumeMessageThread_"));
-
+        /**
+         * 单线程，执行推迟消费的消息
+         */
         this.scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl("ConsumeMessageScheduledThread_"));
+        /**
+         * 单线程，定期清理超时消息（15分钟）
+         */
         this.cleanExpireMsgExecutors = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl("CleanExpireMsgScheduledThread_"));
     }
 
@@ -197,6 +205,13 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
         return result;
     }
 
+    /**
+     * 把从broker拉过来的一批消息，根据BatchSize的设置，把一批消息封装到一个ConsumerRequest中，然后把这个ConsumerRequest提交到consumeExecutor线程池中执行
+     * @param msgs
+     * @param processQueue
+     * @param messageQueue
+     * @param dispatchToConsume
+     */
     @Override
     public void submitConsumeRequest(
         final List<MessageExt> msgs,
@@ -204,6 +219,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
         final MessageQueue messageQueue,
         final boolean dispatchToConsume) {
         final int consumeBatchSize = this.defaultMQPushConsumer.getConsumeMessageBatchMaxSize();
+        // 这个if判断就表现出consumerBatchSize的作用，就是每次交给线程池的消息数
         if (msgs.size() <= consumeBatchSize) {
             ConsumeRequest consumeRequest = new ConsumeRequest(msgs, processQueue, messageQueue);
             try {
@@ -247,6 +263,12 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
         }
     }
 
+    /**
+     * 处理消费结果的方法，包含ack机制
+     * @param status
+     * @param context
+     * @param consumeRequest
+     */
     public void processConsumeResult(
         final ConsumeConcurrentlyStatus status,
         final ConsumeConcurrentlyContext context,
@@ -269,6 +291,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
             case RECONSUME_LATER:
                 ackIndex = -1;
+                // msgs全部重新发给broker
                 this.getConsumerStatsManager().incConsumeFailedTPS(consumerGroup, consumeRequest.getMessageQueue().getTopic(),
                     consumeRequest.getMsgs().size());
                 break;
