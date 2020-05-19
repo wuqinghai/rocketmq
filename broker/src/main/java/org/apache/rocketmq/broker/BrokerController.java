@@ -887,6 +887,7 @@ public class BrokerController {
             this.registerBrokerAll(true, false, true);
         }
 
+        // Broker端发送心跳请求
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override

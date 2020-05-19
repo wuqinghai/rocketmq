@@ -185,7 +185,7 @@ public abstract class NettyRemotingAbstract {
 
     /**
      * Process incoming request command issued by remote peer.
-     *
+     * 处理broker、consumer、producer等各种netty的请求
      * @param ctx channel handler context.
      * @param cmd request command.
      */

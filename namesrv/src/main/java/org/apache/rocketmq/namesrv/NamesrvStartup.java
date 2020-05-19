@@ -78,10 +78,13 @@ public class NamesrvStartup {
             System.exit(-1);
             return null;
         }
-
+        // NameServer业务参数
         final NamesrvConfig namesrvConfig = new NamesrvConfig();
+        // NameServer网络参数
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
+        // 设置监听的端口
         nettyServerConfig.setListenPort(9876);
+        // -c configFile 参数，指定配置文件路径，加载配置文件里面的配置项，封装到namesrvConfig、nettyServerConfig
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -97,7 +100,7 @@ public class NamesrvStartup {
                 in.close();
             }
         }
-
+        // 打印配置信息
         if (commandLine.hasOption('p')) {
             InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_CONSOLE_NAME);
             MixAll.printObjectProperties(console, namesrvConfig);
@@ -122,7 +125,7 @@ public class NamesrvStartup {
 
         MixAll.printObjectProperties(log, namesrvConfig);
         MixAll.printObjectProperties(log, nettyServerConfig);
-
+        // 创建NamesrvController实例，并初始化实例，NamesrvController是NameServer的核心控制器
         final NamesrvController controller = new NamesrvController(namesrvConfig, nettyServerConfig);
 
         // remember all configs to prevent discard
@@ -137,6 +140,11 @@ public class NamesrvStartup {
             throw new IllegalArgumentException("NamesrvController is null");
         }
 
+        /*
+        加载KV配置，创建NettyServer网络处理对象并注册好处理请求的业务类，然后开启两个定时任务，在RocketMQ中此类定时任务统称为心跳检测。
+        定时任务1: NameServer 每隔10s扫描一次Broker，移除处于不激活状态的Broker。
+        定时任务2: namesServer每隔10分钟打印一次KV 配置。
+         */
         boolean initResult = controller.initialize();
         if (!initResult) {
             controller.shutdown();
@@ -150,7 +158,7 @@ public class NamesrvStartup {
                 return null;
             }
         }));
-
+        // netty服务器开启
         controller.start();
 
         return controller;
